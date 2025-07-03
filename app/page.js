@@ -53,12 +53,7 @@ const HomePage = () => {
   const filters = [
     { name: "AI Effects", icon: "⭐" },
     { name: "Motion Controls", icon: "🎬" },
-    { name: "VFX", icon: "⭐" },
-    { name: "TikTok Niches", icon: "👑" },
-    { name: "Veo3 Niches", icon: "🎵" },
-    { name: "Hunyuan LoRA", icon: "🧠" },
-    { name: "Wan 2.1 LoRA", icon: "🧠" },
-    { name: "LTX LoRA", icon: "🧠" }
+    { name: "VFX", icon: "⭐" }
   ];
 
   const aiEffects = [
@@ -189,21 +184,24 @@ const HomePage = () => {
         background: '#111',
         color: 'white',
         display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         boxSizing: 'border-box',
         overflow: 'hidden'
       }}
     >
-      <Sidebar />
       {/* Main Content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#111' }}>
+      <div style={{ width: '100%', maxWidth: '1200px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#111' }}>
         {/* Top Header */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           padding: '16px 24px',
-          borderBottom: '1px solid #2d2d2d'
+          borderBottom: '1px solid #2d2d2d',
+          width: '100%'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
@@ -219,32 +217,6 @@ const HomePage = () => {
             </div>
             <span style={{ fontSize: '24px', fontWeight: 'bold', color: 'white' }}>vadoo AI</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#1a1a1a',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              border: '1px solid #2d2d2d'
-            }}>
-              <span style={{ fontSize: '14px' }}>💰</span>
-              <span style={{ fontWeight: '500', color: 'white', fontSize: '14px' }}>0 credits</span>
-            </div>
-            <button style={{
-              background: '#f97316',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '8px 16px',
-              fontWeight: '600',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}>
-              Upgrade
-            </button>
-          </div>
         </div>
 
         {/* Filter Tabs */}
@@ -254,7 +226,8 @@ const HomePage = () => {
           gap: '8px',
           padding: '16px 24px',
           borderBottom: '1px solid #2d2d2d',
-          overflowX: 'auto'
+          overflowX: 'auto',
+          width: '100%'
         }}>
           {filters.map((filter, index) => (
             <button
@@ -297,7 +270,7 @@ const HomePage = () => {
         </div>
 
         {/* AI Effects Grid */}
-        <div style={{ flex: 1, padding: '24px' }}>
+        <div style={{ flex: 1, padding: '24px', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
             <span style={{ fontSize: '18px' }}>⭐</span>
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', margin: 0 }}>AI Effects</h2>
