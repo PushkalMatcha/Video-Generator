@@ -1,4 +1,4 @@
-import { vadooAPI } from '../../../lib/vadoo';
+import { vadooAPI } from '../../lib/vadoo';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
