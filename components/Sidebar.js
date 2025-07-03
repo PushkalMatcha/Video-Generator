@@ -1,7 +1,21 @@
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 const Sidebar = () => {
+  const pathname = usePathname();
+
+  const commonStyles = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px',
+    borderRadius: '6px',
+    marginBottom: '4px',
+    cursor: 'pointer',
+    textDecoration: 'none'
+  };
+
   return (
     <div style={{
       width: '240px',
@@ -42,48 +56,38 @@ const Sidebar = () => {
 
       {/* Navigation */}
       <nav>
-        <Link href="/" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '12px',
-            color: '#9ca3af',
-            borderRadius: '6px',
-            marginBottom: '4px',
-            cursor: 'pointer',
-            textDecoration: 'none'
-          }}>
-            <span>🏠</span>
-            <span>Home</span>
+        <Link
+          href="/"
+          style={{
+            ...commonStyles,
+            color: pathname === '/' ? 'white' : '#9ca3af',
+            backgroundColor: pathname === '/' ? '#2d2d2d' : 'transparent'
+          }}
+        >
+          <span>🏠</span>
+          <span>Home</span>
         </Link>
-        <Link href="/my-projects" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '12px',
-            color: 'white',
-            backgroundColor: '#2d2d2d',
-            borderRadius: '6px',
-            marginBottom: '4px',
-            cursor: 'pointer',
-            textDecoration: 'none'
-          }}>
-            <span>📁</span>
-            <span>My Projects</span>
+        <Link
+          href="/my-projects"
+          style={{
+            ...commonStyles,
+            color: pathname === '/my-projects' ? 'white' : '#9ca3af',
+            backgroundColor: pathname === '/my-projects' ? '#2d2d2d' : 'transparent'
+          }}
+        >
+          <span>📁</span>
+          <span>My Projects</span>
         </Link>
-        <Link href="/profile" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '12px',
-            color: '#9ca3af',
-            borderRadius: '6px',
-            marginBottom: '4px',
-            cursor: 'pointer',
-            textDecoration: 'none'
-          }}>
-            <span>👤</span>
-            <span>Profile</span>
+        <Link
+          href="/profile"
+          style={{
+            ...commonStyles,
+            color: pathname === '/profile' ? 'white' : '#9ca3af',
+            backgroundColor: pathname === '/profile' ? '#2d2d2d' : 'transparent'
+          }}
+        >
+          <span>👤</span>
+          <span>Profile</span>
         </Link>
       </nav>
 
@@ -95,7 +99,8 @@ const Sidebar = () => {
             alignItems: 'center',
             gap: '12px',
             padding: '12px',
-            color: '#9ca3af',
+            color: pathname === '/activity' ? 'white' : '#9ca3af',
+            backgroundColor: pathname === '/activity' ? '#2d2d2d' : 'transparent',
             borderRadius: '6px',
             marginBottom: '4px',
             cursor: 'pointer',
@@ -109,7 +114,8 @@ const Sidebar = () => {
             alignItems: 'center',
             gap: '12px',
             padding: '12px',
-            color: '#9ca3af',
+            color: pathname === '/support' ? 'white' : '#9ca3af',
+            backgroundColor: pathname === '/support' ? '#2d2d2d' : 'transparent',
             borderRadius: '6px',
             marginBottom: '4px',
             cursor: 'pointer',
@@ -123,7 +129,8 @@ const Sidebar = () => {
             alignItems: 'center',
             gap: '12px',
             padding: '12px',
-            color: '#9ca3af',
+            color: pathname === '/subscription' ? 'white' : '#9ca3af',
+            backgroundColor: pathname === '/subscription' ? '#2d2d2d' : 'transparent',
             borderRadius: '6px',
             marginBottom: '4px',
             cursor: 'pointer',
@@ -137,7 +144,8 @@ const Sidebar = () => {
             alignItems: 'center',
             gap: '12px',
             padding: '12px',
-            color: '#9ca3af',
+            color: pathname === '/logout' ? 'white' : '#9ca3af',
+            backgroundColor: pathname === '/logout' ? '#2d2d2d' : 'transparent',
             borderRadius: '6px',
             marginBottom: '4px',
             cursor: 'pointer',
