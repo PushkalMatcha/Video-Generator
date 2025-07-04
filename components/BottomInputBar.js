@@ -14,8 +14,6 @@ const BottomInputBar = ({
   setPreviewUrl,
   inputText,
   setInputText,
-  selectedModel,
-  setSelectedModel,
   selectedAspect,
   setSelectedAspect,
   selectedDuration,
@@ -25,9 +23,45 @@ const BottomInputBar = ({
   handleDragOver,
   handleDragLeave,
   handleDrop,
-  handleGenerate // <-- Add handleGenerate to props
+  handleGenerate,
+  selectedEffect, // <-- add selectedEffect prop
+  selectedResolution,
+  setSelectedResolution,
+  selectedQuality,
+  setSelectedQuality
 }) => {
   const [remixHover, setRemixHover] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [pendingGenerate, setPendingGenerate] = useState(false);
+
+  // Wrap the generate handler to show modal first, but only if all required fields are present
+  function handleGenerateWithApiKey(e) {
+    e.preventDefault && e.preventDefault();
+    // Validation: require effect selection AND (image or text)
+    const hasImage = (uploadedFile && previewUrl) || (inputText && (inputText.startsWith('http://') || inputText.startsWith('https://')));
+    const hasText = inputText && inputText.trim().length > 0;
+    if (!selectedEffect) {
+      alert('Please select an effect before generating.');
+      return;
+    }
+    if (!(hasImage || hasText)) {
+      alert('Please provide an image or a text prompt before generating.');
+      return;
+    }
+    setShowApiKeyModal(true);
+    setPendingGenerate(true);
+  }
+
+  function handleApiKeyContinue() {
+    setShowApiKeyModal(false);
+    setPendingGenerate(false);
+    setApiKeyInput('');
+    // Call the real generate handler, passing the API key if needed
+    if (typeof handleGenerate === 'function') {
+      handleGenerate(apiKeyInput);
+    }
+  }
 
   return (
     <>
@@ -160,7 +194,7 @@ const BottomInputBar = ({
             >
               <input
                 type="text"
-                placeholder="Upload an image or just text here"
+                placeholder="Upload an image, enter image URL, or just text here"
                 style={{
                   flex: 1,
                   backgroundColor: 'transparent',
@@ -191,7 +225,7 @@ const BottomInputBar = ({
                 }}
                 onMouseOver={e => e.currentTarget.style.background = '#4f46e5'}
                 onMouseOut={e => e.currentTarget.style.background = 'linear-gradient(135deg,rgb(21, 29, 43) 60%,rgb(15, 6, 67) 100%)'}
-                onClick={handleGenerate} // <-- Add this line to trigger generation
+                onClick={handleGenerateWithApiKey}
               >
                 <svg width="22" height="22" fill="none" stroke="white" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -207,30 +241,6 @@ const BottomInputBar = ({
               marginBottom: 0,
               width: '100%'
             }}>
-              <select
-                value={selectedModel}
-                onChange={e => setSelectedModel(e.target.value)}
-                style={{
-                  background: '#10141c',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '8px 18px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
-                  outline: 'none',
-                  appearance: 'none',
-                  minWidth: '120px',
-                  transition: 'background 0.2s'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = '#232b39'}
-                onMouseOut={e => e.currentTarget.style.background = '#10141c'}
-              >
-                <option value="Kling Standard">🧊 Kling Standard</option>
-                <option value="Kling Pro">👑 Kling Pro</option>
-                <option value="Vadoo AI">🤖 Vadoo AI</option>
-              </select>
               <select
                 value={selectedAspect}
                 onChange={e => setSelectedAspect(e.target.value)}
@@ -277,58 +287,190 @@ const BottomInputBar = ({
               >
                 <option value="5s">⏱️ 5s</option>
                 <option value="10s">⏱️ 10s</option>
-                <option value="15s">⏱️ 15s</option>
-                <option value="30s">⏱️ 30s</option>
               </select>
-              <button
+              <select
+                value={selectedResolution}
+                onChange={e => setSelectedResolution(e.target.value)}
                 style={{
-                  background: remixHover
-                    ? '#4f46e5'
-                    : 'linear-gradient(135deg, #3b82f6 60%, #8b5cf6 100%)',
-                  color: 'white',
+                  background: '#10141c',
+                  color: '#fff',
                   border: 'none',
                   borderRadius: '12px',
-                  padding: '8px 22px',
+                  padding: '8px 18px',
                   fontSize: '14px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  marginLeft: '0',
-                  boxShadow: '0 2px 8px 0 rgba(59,130,246,0.10)',
-                  transition: 'background 0.2s'
+                  fontWeight: '600',
+                  boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
+                  outline: 'none',
+                  appearance: 'none',
+                  minWidth: '70px',
+                  transition: 'background 0.2s',
+                  marginLeft: '0'
                 }}
-                onMouseOver={() => setRemixHover(true)}
-                onMouseOut={() => setRemixHover(false)}
+                onMouseOver={e => e.currentTarget.style.background = '#232b39'}
+                onMouseOut={e => e.currentTarget.style.background = '#10141c'}
               >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  {!remixHover && (
-                    <svg width="16" height="16" fill="none" stroke="white" viewBox="0 0 24 24" style={{ marginRight: 2 }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  )}
-                  Remix
-                </span>
-              </button>
+                <option value="480p">480p</option>
+                <option value="720p">720p</option>
+              </select>
+              <select
+                value={selectedQuality}
+                onChange={e => setSelectedQuality(e.target.value)}
+                style={{
+                  background: '#10141c',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '8px 18px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
+                  outline: 'none',
+                  appearance: 'none',
+                  minWidth: '90px',
+                  transition: 'background 0.2s',
+                  marginLeft: '0'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = '#232b39'}
+                onMouseOut={e => e.currentTarget.style.background = '#10141c'}
+              >
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
               <div style={{ flex: 1 }} />
-              <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 500 }}>
-                This will cost <span style={{ color: 'white', fontWeight: 700 }}>40 credits</span> from your balance
-              </span>
             </div>
-            {/* Preview uploaded file */}
-            {previewUrl && (
-              <div style={{ marginTop: '12px', textAlign: 'left' }}>
-                {uploadedFile && uploadedFile.type.startsWith('image') ? (
+            {/* Show selected effect if any */}
+            {selectedEffect && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                background: '#232b39',
+                borderRadius: '10px',
+                padding: '6px 14px',
+                marginBottom: '8px',
+                marginTop: '2px',
+                color: '#fff',
+                fontWeight: 500,
+                fontSize: '15px',
+                boxShadow: '0 1px 4px 0 rgba(0,0,0,0.10)'
+              }}>
+                {selectedEffect.effect || selectedEffect.url ? (
+                  <img
+                    src={selectedEffect.effect || selectedEffect.url}
+                    alt={selectedEffect.name || 'Effect'}
+                    style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', border: '1px solid #23232b' }}
+                  />
+                ) : null}
+                <span>{selectedEffect.name || 'Selected Effect'}</span>
+                <button
+                  onClick={() => setSelectedEffect(null)}
+                  style={{
+                    marginLeft: 8,
+                    background: 'none',
+                    border: 'none',
+                    color: '#9ca3af',
+                    fontSize: 18,
+                    cursor: 'pointer',
+                    borderRadius: '50%',
+                    width: 28,
+                    height: 28,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.2s'
+                  }}
+                  title="Remove selected effect"
+                  aria-label="Remove selected effect"
+                  onMouseOver={e => e.currentTarget.style.background = '#2d2d2d'}
+                  onMouseOut={e => e.currentTarget.style.background = 'none'}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {/* Preview uploaded file or image URL */}
+            {((uploadedFile && previewUrl) || (inputText && (inputText.startsWith('http://') || inputText.startsWith('https://')))) && (
+              <div style={{
+                marginTop: '12px',
+                textAlign: 'left',
+                maxWidth: '180px',
+                minHeight: '90px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                position: 'relative'
+              }}>
+                {/* Clear/Cross button */}
+                <button
+                  onClick={() => {
+                    setUploadedFile && setUploadedFile(null);
+                    setPreviewUrl && setPreviewUrl('');
+                    setInputText && setInputText('');
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    background: '#232b39',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: 22,
+                    height: 22,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 16,
+                    cursor: 'pointer',
+                    zIndex: 2,
+                    boxShadow: '0 1px 4px 0 rgba(0,0,0,0.10)',
+                    transition: 'background 0.2s'
+                  }}
+                  title="Remove preview"
+                  aria-label="Remove preview"
+                  onMouseOver={e => e.currentTarget.style.background = '#2d2d2d'}
+                  onMouseOut={e => e.currentTarget.style.background = '#232b39'}
+                >
+                  ×
+                </button>
+                {uploadedFile && previewUrl && uploadedFile.type.startsWith('image') ? (
                   <img
                     src={previewUrl}
                     alt="Preview"
-                    style={{ maxWidth: '160px', maxHeight: '90px', borderRadius: '8px', border: '1px solid #23232b' }}
+                    style={{
+                      maxWidth: '160px',
+                      maxHeight: '90px',
+                      borderRadius: '8px',
+                      border: '1px solid #23232b',
+                      background: '#18181b'
+                    }}
                   />
-                ) : uploadedFile && uploadedFile.type.startsWith('video') ? (
+                ) : uploadedFile && previewUrl && uploadedFile.type.startsWith('video') ? (
                   <video
                     src={previewUrl}
                     controls
-                    style={{ maxWidth: '160px', maxHeight: '90px', borderRadius: '8px', border: '1px solid #23232b' }}
+                    style={{
+                      maxWidth: '160px',
+                      maxHeight: '90px',
+                      borderRadius: '8px',
+                      border: '1px solid #23232b',
+                      background: '#18181b'
+                    }}
                   />
-                ) : null}
+                ) : ((inputText && (inputText.startsWith('http://') || inputText.startsWith('https://'))) ? (
+                  <img
+                    src={inputText}
+                    alt="Image URL Preview"
+                    style={{
+                      maxWidth: '160px',
+                      maxHeight: '90px',
+                      borderRadius: '8px',
+                      border: '1px solid #23232b',
+                      background: '#18181b'
+                    }}
+                    onError={e => { e.target.onerror = null; e.target.src = ''; e.target.alt = 'Invalid image URL'; }}
+                  />
+                ) : null)}
               </div>
             )}
           </div>
@@ -367,6 +509,41 @@ const BottomInputBar = ({
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
+      )}
+      {/* API Key Modal */}
+      {showApiKeyModal && (
+        <div style={{
+          position: 'fixed', left: 0, top: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.45)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{ background: '#232b39', padding: 32, borderRadius: 16, minWidth: 320, boxShadow: '0 4px 32px 0 #0008', color: '#fff', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Enter your MuApi API Key</div>
+            <input
+              type="password"
+              value={apiKeyInput}
+              onChange={e => setApiKeyInput(e.target.value)}
+              placeholder="API Key"
+              style={{ padding: 10, borderRadius: 8, border: '1px solid #333', fontSize: 16, background: '#18181b', color: '#fff' }}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+              <button
+                onClick={() => {
+                  setShowApiKeyModal(false);
+                  setApiKeyInput('');
+                  setPendingGenerate(false);
+                }}
+                style={{ padding: '8px 18px', borderRadius: 8, background: '#232b39', color: '#fff', border: '1px solid #444', fontWeight: 500, fontSize: 15, cursor: 'pointer' }}
+              >Cancel</button>
+              <button
+                type="button"
+                onClick={handleApiKeyContinue}
+                style={{ padding: '8px 18px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 600, fontSize: 15, cursor: 'pointer' }}
+                disabled={!apiKeyInput.trim()}
+              >Continue</button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

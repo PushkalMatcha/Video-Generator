@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Play,
   Image,
@@ -19,12 +19,15 @@ import {
 } from 'lucide-react';
 import './globals.css'; // if not already imported
 import BottomInputBar from '../components/BottomInputBar';
-import Sidebar from '../components/Sidebar';
+
 
 const HomePage = () => {
   const [activeFilter, setActiveFilter] = useState('AI Effects');
   const [showInputBar, setShowInputBar] = useState(true);
   const [showChatButton, setShowChatButton] = useState(false);
+  const [selectedEffect, setSelectedEffect] = useState(null);
+  const [selectedResolution, setSelectedResolution] = useState('720p');
+  const [selectedQuality, setSelectedQuality] = useState('high');
 
   const navItems = [
     { icon: Home, label: 'Home', active: true },
@@ -53,7 +56,6 @@ const HomePage = () => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [inputText, setInputText] = useState("");
-  const [selectedModel, setSelectedModel] = useState("Kling Standard");
   const [selectedAspect, setSelectedAspect] = useState("16:9");
   const [selectedDuration, setSelectedDuration] = useState("5s");
   const fileInputRef = useRef(null);
@@ -62,6 +64,7 @@ const HomePage = () => {
   const aiEffectsRef = useRef(null);
   const motionControlsRef = useRef(null);
   const vfxControlsRef = useRef(null);
+  const generationSectionRef = useRef(null);
 
   // Scroll to section when filter is selected
   useEffect(() => {
@@ -320,6 +323,202 @@ const HomePage = () => {
     },
   ];
 
+  // --- Video Generation Logic (from generate/page.js) ---
+  const [status, setStatus] = useState('idle');
+  const [requestId, setRequestId] = useState(null);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [error, setError] = useState('');
+  const [log, setLog] = useState([]);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const isMountedRef = useRef(true);
+  const pollTimeoutRef = useRef(null);
+  const API_URL = 'https://api.muapi.ai/api/v1/generate_wan_ai_effects';
+  const RESULT_URL = 'https://api.muapi.ai/api/v1/predictions';
+  const MAX_POLL_ATTEMPTS = 60;
+
+  const addLog = useCallback((message) => {
+    if (isMountedRef.current) {
+      setLog(prevLog => [...prevLog, message]);
+    }
+  }, []);
+
+  const handleVideoGenerate = useCallback(() => {
+    addLog('Opening API key modal for video generation...');
+    setShowApiKeyModal(true);
+  }, [addLog]);
+
+  const pollForResult = useCallback(async (reqId, userApiKey) => {
+    const pollHeaders = { 'x-api-key': userApiKey };
+    const pollUrl = `${RESULT_URL}/${reqId}/result`;
+    const start = Date.now();
+    let tries = 0;
+    const poll = async () => {
+      if (!isMountedRef.current) return;
+      tries++;
+      addLog(`Polling attempt #${tries}...`);
+      try {
+        const res = await fetch(pollUrl, { headers: pollHeaders });
+        if (!res.ok) {
+          throw new Error(`Poll error: ${res.status}`);
+        }
+        const data = await res.json();
+        if (!data.status) {
+          throw new Error('Invalid response: missing status');
+        }
+        const taskStatus = data.status;
+        if (taskStatus === 'completed') {
+          addLog('Completed response: ' + JSON.stringify(data));
+          let videoUrl = data.video?.url;
+          if (!videoUrl && typeof data.output === 'string' && (data.output.startsWith('http://') || data.output.startsWith('https://'))) {
+            videoUrl = data.output;
+          }
+          if (videoUrl) {
+            if (isMountedRef.current) {
+              setStatus('completed');
+              setVideoUrl(videoUrl);
+              addLog(`Task completed in ${((Date.now()-start)/1000).toFixed(1)}s. Video URL: ${videoUrl}`);
+            }
+            return;
+          } else {
+            addLog('Completed but video URL missing.');
+            setStatus('failed');
+            setError('Video generation failed: No video URL received. Would you like to retry?');
+            return;
+          }
+        } else if (taskStatus === 'failed') {
+          if (isMountedRef.current) {
+            setStatus('failed');
+            const errorMsg = data.error || 'Task failed';
+            setError(errorMsg);
+            addLog(`Task failed: ${errorMsg}`);
+          }
+          return;
+        } else {
+          addLog(`Status: ${taskStatus}`);
+        }
+        if (tries < MAX_POLL_ATTEMPTS && isMountedRef.current) {
+          pollTimeoutRef.current = setTimeout(poll, 1000);
+        } else if (tries >= MAX_POLL_ATTEMPTS && isMountedRef.current) {
+          setStatus('timeout');
+          setError('Polling timeout: Maximum attempts reached');
+          addLog('Polling timeout: Maximum attempts reached');
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+        if (isMountedRef.current) {
+          setError(err.message);
+          setStatus('error');
+          addLog(`Polling error: ${err.message}`);
+        }
+      }
+    };
+    poll();
+  }, [addLog]);
+
+  const startGenerationWithKey = useCallback(async (userApiKey) => {
+    // --- Video Generation Logic (moved from render body) ---
+    // Helper to map aspect and resolution to MuApi size
+    function getMuApiSize(aspect, resolution) {
+      if (typeof aspect === 'string' && aspect.trim() !== '') aspect = aspect.trim();
+      if (aspect === '9:16') return '480*832';
+      if (aspect === '16:9') return '832*480';
+      return '832*480';
+    }
+    let size = getMuApiSize(selectedAspect, selectedResolution);
+    size = String(size).replace(/[^0-9*]/g, '');
+    if (size !== '832*480' && size !== '480*832') {
+      size = '832*480';
+    }
+    const videoPayload = {
+      prompt: inputText, // user input only
+      name: selectedEffect?.name, // user-selected effect only
+      aspect_ratio: selectedAspect, // user-selected aspect only
+      size, // always valid value
+      quality: selectedQuality, // user-selected quality only
+      duration: parseInt(selectedDuration), // user-selected duration only
+    };
+    // Determine image_url from previewUrl or inputText if it's a valid public URL
+    let imageUrl = null;
+    function isHttpUrl(url) {
+      return typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'));
+    }
+    if (isHttpUrl(previewUrl)) {
+      imageUrl = previewUrl;
+    } else if (typeof inputText === 'string' && isHttpUrl(inputText)) {
+      imageUrl = inputText;
+    }
+    // If uploadedFile exists but previewUrl is not public, show error
+    if (uploadedFile && !isHttpUrl(previewUrl)) {
+      setError('Please upload a valid image URL (http/https) or use a direct image link.');
+      return;
+    }
+    if (!imageUrl) {
+      setError('Please upload an image or enter a valid image URL before generating.');
+      return;
+    }
+    videoPayload.image_url = imageUrl;
+    if (!userApiKey.trim()) {
+      setError('API key is required');
+      return;
+    }
+    setStatus('submitting');
+    setLog([`Submitting task to MuApi...`]);
+    setError('');
+    setVideoUrl('');
+    setRequestId(null);
+    setShowInputBar(false); // Close the input bar automatically
+    // Scroll to generation section and show message
+    setTimeout(() => {
+      if (generationSectionRef.current) {
+        generationSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 200);
+    try {
+      addLog('Payload being sent: ' + JSON.stringify(videoPayload, null, 2));
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': userApiKey,
+        },
+        body: JSON.stringify(videoPayload),
+      });
+      addLog('API response status: ' + res.status);
+      if (!res.ok) {
+        const errorText = await res.text();
+        addLog('API error response: ' + errorText);
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
+      const data = await res.json();
+      addLog('API raw response: ' + JSON.stringify(data));
+      if (!data.request_id) {
+        setError('Invalid response: missing request_id. ' + (data.error || JSON.stringify(data)));
+        throw new Error('Invalid response: missing request_id');
+      }
+      const reqId = data.request_id;
+      setRequestId(reqId);
+      addLog(`Task submitted. Request ID: ${reqId}`);
+      setStatus('polling');
+      pollForResult(reqId, userApiKey);
+    } catch (err) {
+      console.error('Generation error:', err);
+      setError(err.message);
+      setStatus('error');
+      addLog(`Error: ${err.message}`);
+      if (err.stack) addLog('Stack trace: ' + err.stack);
+    }
+  }, [addLog, inputText, selectedEffect, selectedAspect, selectedResolution, selectedQuality, selectedDuration, previewUrl, pollForResult]);
+
+  React.useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div
       style={{
@@ -417,14 +616,15 @@ const HomePage = () => {
                 key={index}
                 style={{
                   cursor: 'pointer',
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: selectedEffect && selectedEffect.name === effect.name ? '#3b82f6' : '#1a1a1a',
                   borderRadius: '12px',
                   overflow: 'hidden',
-                  border: '1px solid #2d2d2d',
+                  border: selectedEffect && selectedEffect.name === effect.name ? '2px solid #3b82f6' : '1px solid #2d2d2d',
                   display: 'flex',
                   flexDirection: 'column',
                   minHeight: '200px'
                 }}
+                onClick={() => setSelectedEffect(effect)}
               >
                 <div style={{
                   position: 'relative',
@@ -507,14 +707,15 @@ const HomePage = () => {
                 key={index}
                 style={{
                   cursor: 'pointer',
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: selectedEffect && selectedEffect.name === control.name ? '#3b82f6' : '#1a1a1a',
                   borderRadius: '12px',
                   overflow: 'hidden',
-                  border: '1px solid #2d2d2d',
+                  border: selectedEffect && selectedEffect.name === control.name ? '2px solid #3b82f6' : '1px solid #2d2d2d',
                   display: 'flex',
                   flexDirection: 'column',
                   minHeight: '200px'
                 }}
+                onClick={() => setSelectedEffect(control)}
               >
                 <div style={{
                   position: 'relative',
@@ -575,14 +776,15 @@ const HomePage = () => {
                 key={index}
                 style={{
                   cursor: 'pointer',
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: selectedEffect && selectedEffect.name === vfx.name ? '#3b82f6' : '#1a1a1a',
                   borderRadius: '12px',
                   overflow: 'hidden',
-                  border: '1px solid #2d2d2d',
+                  border: selectedEffect && selectedEffect.name === vfx.name ? '2px solid #3b82f6' : '1px solid #2d2d2d',
                   display: 'flex',
                   flexDirection: 'column',
                   minHeight: '200px'
                 }}
+                onClick={() => setSelectedEffect(vfx)}
               >
                 <div style={{
                   position: 'relative',
@@ -624,6 +826,34 @@ const HomePage = () => {
           </div>
         </div>
 
+        {/* Video Generation Status Section */}
+        <div ref={generationSectionRef} style={{ width: '100%', marginTop: 32, marginBottom: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 120 }}>
+          {(status === 'submitting' || status === 'polling') && (
+            <>
+              <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Your video is generating...</div>
+              <div style={{ width: 320, height: 8, background: '#232b39', borderRadius: 8, overflow: 'hidden', marginBottom: 8 }}>
+                <div className="loading-bar" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)', animation: 'loadingBarAnim 1.2s linear infinite' }} />
+              </div>
+              <style>{`
+                @keyframes loadingBarAnim {
+                  0% { transform: translateX(-100%); }
+                  100% { transform: translateX(100%); }
+                }
+                .loading-bar {
+                  animation: loadingBarAnim 1.2s linear infinite;
+                }
+              `}</style>
+            </>
+          )}
+          {status === 'completed' && videoUrl && (
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Your video is ready!</div>
+              <video src={videoUrl} controls style={{ maxWidth: 400, borderRadius: 8, marginBottom: 8 }} />
+              <a href={videoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', fontSize: 16 }}>Open in new tab</a>
+            </div>
+          )}
+        </div>
+
         {/* Bottom Input Bar */}
         <BottomInputBar
           showInputBar={showInputBar}
@@ -636,8 +866,6 @@ const HomePage = () => {
           setPreviewUrl={setPreviewUrl}
           inputText={inputText}
           setInputText={setInputText}
-          selectedModel={selectedModel}
-          setSelectedModel={setSelectedModel}
           selectedAspect={selectedAspect}
           setSelectedAspect={setSelectedAspect}
           selectedDuration={selectedDuration}
@@ -647,8 +875,92 @@ const HomePage = () => {
           handleDragOver={handleDragOver}
           handleDragLeave={handleDragLeave}
           handleDrop={handleDrop}
-          handleGenerate={handleGenerate}
+          handleGenerate={startGenerationWithKey} // <-- Use MuApi workflow directly
+          selectedEffect={selectedEffect}
+          selectedResolution={selectedResolution}
+          setSelectedResolution={setSelectedResolution}
+          selectedQuality={selectedQuality}
+          setSelectedQuality={setSelectedQuality}
         />
+
+        {/* Video Generation Modal and Log */}
+        {showApiKeyModal && (
+          <div style={{
+            position: 'fixed', left: 0, top: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.45)', zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div style={{ background: '#232b39', padding: 32, borderRadius: 16, minWidth: 320, boxShadow: '0 4px 32px 0 #0008', color: '#fff', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Enter your MuApi API Key</div>
+              <input
+                type="password"
+                value={apiKeyInput}
+                onChange={e => setApiKeyInput(e.target.value)}
+                placeholder="API Key"
+                style={{ padding: 10, borderRadius: 8, border: '1px solid #333', fontSize: 16, background: '#18181b', color: '#fff' }}
+                autoFocus
+                disabled={status === 'submitting' || status === 'polling'}
+              />
+              <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                <button
+                  onClick={() => {
+                    setShowApiKeyModal(false);
+                    setApiKeyInput('');
+                  }}
+                  style={{ padding: '8px 18px', borderRadius: 8, background: '#232b39', color: '#fff', border: '1px solid #444', fontWeight: 500, fontSize: 15, cursor: 'pointer' }}
+                  disabled={status === 'submitting' || status === 'polling'}
+                >Cancel</button>
+                <button
+                  onClick={() => {
+                    setShowApiKeyModal(false);
+                    startGenerationWithKey(apiKeyInput);
+                  }}
+                  style={{ padding: '8px 18px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 600, fontSize: 15, cursor: (!apiKeyInput.trim() || status === 'submitting' || status === 'polling') ? 'not-allowed' : 'pointer', opacity: (!apiKeyInput.trim() || status === 'submitting' || status === 'polling') ? 0.6 : 1 }}
+                  disabled={!apiKeyInput.trim() || status === 'submitting' || status === 'polling'}
+                >Continue</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {requestId && (
+          <div style={{ margin: '10px 0' }}>
+            <b>Request ID:</b> {requestId}
+          </div>
+        )}
+        {videoUrl && false && (
+          <div style={{ margin: '18px 0' }}>
+            <b>Result Video:</b><br />
+            <a href={videoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa' }}>{videoUrl}</a><br />
+            <video src={videoUrl} controls style={{ maxWidth: 400, marginTop: 10, borderRadius: 8 }} />
+          </div>
+        )}
+        {error && (
+          <div style={{ color: '#f87171', margin: '10px 0' }}>
+            <b>Error:</b> {error}
+          </div>
+        )}
+        {status === 'failed' && error && error.includes('retry') && (
+          <div style={{ margin: '16px 0' }}>
+            <button
+              onClick={() => {
+                setError('');
+                setStatus('idle');
+                setLog([]);
+                setVideoUrl('');
+                setRequestId(null);
+                setShowApiKeyModal(true);
+              }}
+              style={{ padding: '10px 28px', borderRadius: 8, background: '#f87171', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
+            >
+              Retry Generation
+            </button>
+          </div>
+        )}
+        {/* <div style={{ marginTop: 18, background: '#232b39', borderRadius: 8, padding: 12, fontSize: 14, minHeight: 80 }}>
+          <b>Log:</b>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {log.map((l, i) => <li key={i}>{l}</li>)}
+          </ul>
+        </div> */}
       </div>
     </div>
   );
