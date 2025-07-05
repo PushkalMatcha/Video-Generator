@@ -64,7 +64,6 @@ const HomePage = () => {
   const aiEffectsRef = useRef(null);
   const motionControlsRef = useRef(null);
   const vfxControlsRef = useRef(null);
-  const generationSectionRef = useRef(null);
 
   // Scroll to section when filter is selected
   useEffect(() => {
@@ -369,8 +368,9 @@ const HomePage = () => {
         const taskStatus = data.status;
         if (taskStatus === 'completed') {
           addLog('Completed response: ' + JSON.stringify(data));
+          // --- PATCH: check both data.video?.url and data.output ---
           let videoUrl = data.video?.url;
-          if (!videoUrl && typeof data.output === 'string' && (data.output.startsWith('http://') || data.output.startsWith('https://'))) {
+          if (!videoUrl && data.output && typeof data.output === 'string') {
             videoUrl = data.output;
           }
           if (videoUrl) {
@@ -420,13 +420,20 @@ const HomePage = () => {
     // --- Video Generation Logic (moved from render body) ---
     // Helper to map aspect and resolution to MuApi size
     function getMuApiSize(aspect, resolution) {
-      if (typeof aspect === 'string' && aspect.trim() !== '') aspect = aspect.trim();
-      if (aspect === '9:16') return '480*832';
+      // Ensure aspect is a string and trim it
+      if (typeof aspect === 'string') {
+        aspect = aspect.trim();
+      } else {
+        // If aspect is not a string or is null/undefined, default to 16:9
+        aspect = '16:9';
+      }
+      // Accept both 16:9 and 9:16, fallback to 832*480
       if (aspect === '16:9') return '832*480';
+      if (aspect === '9:16') return '480*832';
       return '832*480';
     }
     let size = getMuApiSize(selectedAspect, selectedResolution);
-    size = String(size).replace(/[^0-9*]/g, '');
+    // Ensure size is exactly one of the allowed values
     if (size !== '832*480' && size !== '480*832') {
       size = '832*480';
     }
@@ -467,13 +474,6 @@ const HomePage = () => {
     setError('');
     setVideoUrl('');
     setRequestId(null);
-    setShowInputBar(false); // Close the input bar automatically
-    // Scroll to generation section and show message
-    setTimeout(() => {
-      if (generationSectionRef.current) {
-        generationSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 200);
     try {
       addLog('Payload being sent: ' + JSON.stringify(videoPayload, null, 2));
       const res = await fetch(API_URL, {
@@ -826,34 +826,6 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* Video Generation Status Section */}
-        <div ref={generationSectionRef} style={{ width: '100%', marginTop: 32, marginBottom: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 120 }}>
-          {(status === 'submitting' || status === 'polling') && (
-            <>
-              <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Your video is generating...</div>
-              <div style={{ width: 320, height: 8, background: '#232b39', borderRadius: 8, overflow: 'hidden', marginBottom: 8 }}>
-                <div className="loading-bar" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)', animation: 'loadingBarAnim 1.2s linear infinite' }} />
-              </div>
-              <style>{`
-                @keyframes loadingBarAnim {
-                  0% { transform: translateX(-100%); }
-                  100% { transform: translateX(100%); }
-                }
-                .loading-bar {
-                  animation: loadingBarAnim 1.2s linear infinite;
-                }
-              `}</style>
-            </>
-          )}
-          {status === 'completed' && videoUrl && (
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Your video is ready!</div>
-              <video src={videoUrl} controls style={{ maxWidth: 400, borderRadius: 8, marginBottom: 8 }} />
-              <a href={videoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', fontSize: 16 }}>Open in new tab</a>
-            </div>
-          )}
-        </div>
-
         {/* Bottom Input Bar */}
         <BottomInputBar
           showInputBar={showInputBar}
@@ -926,7 +898,7 @@ const HomePage = () => {
             <b>Request ID:</b> {requestId}
           </div>
         )}
-        {videoUrl && false && (
+        {videoUrl && (
           <div style={{ margin: '18px 0' }}>
             <b>Result Video:</b><br />
             <a href={videoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa' }}>{videoUrl}</a><br />
@@ -955,12 +927,12 @@ const HomePage = () => {
             </button>
           </div>
         )}
-        {/* <div style={{ marginTop: 18, background: '#232b39', borderRadius: 8, padding: 12, fontSize: 14, minHeight: 80 }}>
+        <div style={{ marginTop: 18, background: '#232b39', borderRadius: 8, padding: 12, fontSize: 14, minHeight: 80 }}>
           <b>Log:</b>
           <ul style={{ margin: 0, paddingLeft: 18 }}>
             {log.map((l, i) => <li key={i}>{l}</li>)}
           </ul>
-        </div> */}
+        </div>
       </div>
     </div>
   );
