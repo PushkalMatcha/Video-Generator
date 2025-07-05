@@ -349,7 +349,8 @@ const HomePage = () => {
 
   const pollForResult = useCallback(async (reqId, userApiKey) => {
     const pollHeaders = { 'x-api-key': userApiKey };
-    const pollUrl = `${RESULT_URL}/${reqId}/result`;
+    // Use proxy endpoint for polling
+    const pollUrl = `/api/proxy-muapi?id=${reqId}`;
     const start = Date.now();
     let tries = 0;
     const poll = async () => {
@@ -927,12 +928,31 @@ const HomePage = () => {
             </button>
           </div>
         )}
+        {status === 'submitting' || status === 'polling' ? (
+          <div id="video-generation-status" style={{ margin: '32px 0', textAlign: 'center' }}>
+            {/* Show loading bar and status while video is generating */}
+            <div style={{ marginBottom: 12, fontWeight: 500, color: '#60a5fa', fontSize: 18 }}>
+              <span role="img" aria-label="hourglass">⏳</span> Your video is generating...
+            </div>
+            <div style={{ width: 320, maxWidth: '90vw', height: 8, background: '#232b39', borderRadius: 8, margin: '0 auto', overflow: 'hidden' }}>
+              <div className="loading-bar" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg,#60a5fa 0%,#3b82f6 100%)', animation: 'loadingBarAnim 1.2s linear infinite' }} />
+            </div>
+            <style>{`
+              @keyframes loadingBarAnim {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+              }
+            `}</style>
+          </div>
+        ) : null}
+        {/*
         <div style={{ marginTop: 18, background: '#232b39', borderRadius: 8, padding: 12, fontSize: 14, minHeight: 80 }}>
           <b>Log:</b>
           <ul style={{ margin: 0, paddingLeft: 18 }}>
             {log.map((l, i) => <li key={i}>{l}</li>)}
           </ul>
         </div>
+        */}
       </div>
     </div>
   );

@@ -57,6 +57,17 @@ const BottomInputBar = ({
     setShowApiKeyModal(false);
     setPendingGenerate(false);
     setApiKeyInput('');
+    // Auto-close input bar and scroll to video section
+    if (typeof setShowInputBar === 'function') {
+      setShowInputBar(false);
+    }
+    // Scroll to video section after a short delay
+    setTimeout(() => {
+      const videoSection = document.getElementById('video-generation-status');
+      if (videoSection) {
+        videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 400);
     // Call the real generate handler, passing the API key if needed
     if (typeof handleGenerate === 'function') {
       handleGenerate(apiKeyInput);
