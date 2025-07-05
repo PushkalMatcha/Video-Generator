@@ -14,6 +14,8 @@ const BottomInputBar = ({
   setPreviewUrl,
   inputText,
   setInputText,
+  imageUrl,
+  setImageUrl,
   selectedAspect,
   setSelectedAspect,
   selectedDuration,
@@ -24,7 +26,7 @@ const BottomInputBar = ({
   handleDragLeave,
   handleDrop,
   handleGenerate,
-  selectedEffect, // <-- add selectedEffect prop
+  selectedEffect,
   selectedResolution,
   setSelectedResolution,
   selectedQuality,
@@ -34,6 +36,13 @@ const BottomInputBar = ({
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [pendingGenerate, setPendingGenerate] = useState(false);
+  const [showImageUrlModal, setShowImageUrlModal] = useState(false);
+  const [imageUrlInput, setImageUrlInput] = useState("");
+  const [showVideoPopup, setShowVideoPopup] = useState(false);
+  const [minimizedVideoPopup, setMinimizedVideoPopup] = useState(false);
+
+  // Dummy video URL for demonstration; replace with your real video URL logic
+  const videoUrl = previewUrl || (imageUrl && imageUrl.endsWith('.mp4') ? imageUrl : null);
 
   // Wrap the generate handler to show modal first, but only if all required fields are present
   function handleGenerateWithApiKey(e) {
@@ -142,7 +151,10 @@ const BottomInputBar = ({
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0', gap: '10px' }}>
               <button
                 type="button"
-                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                onClick={() => {
+                  setImageUrlInput("");
+                  setShowImageUrlModal(true);
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -163,13 +175,6 @@ const BottomInputBar = ({
               >
                 <Image size={18} />
                 <span>Image</span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,video/*"
-                  style={{ display: 'none' }}
-                  onChange={handleFileChange}
-                />
               </button>
               <div style={{ flex: 1 }} />
               <button
@@ -205,7 +210,7 @@ const BottomInputBar = ({
             >
               <input
                 type="text"
-                placeholder="Upload an image, enter image URL, or just text here"
+                placeholder="Enter your prompt here"
                 style={{
                   flex: 1,
                   backgroundColor: 'transparent',
@@ -238,7 +243,7 @@ const BottomInputBar = ({
                 onMouseOut={e => e.currentTarget.style.background = 'linear-gradient(135deg,rgb(21, 29, 43) 60%,rgb(15, 6, 67) 100%)'}
                 onClick={handleGenerateWithApiKey}
               >
-                <svg width="22" height="22" fill="none" stroke="white" viewBox="0 0 24 24">
+                <svg width="22" height="22" fill="none" stroke="white" viewBox="0 0 24 24" style={{transform: 'rotate(90deg)'}}>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
               </button>
@@ -257,7 +262,7 @@ const BottomInputBar = ({
                 onChange={e => setSelectedAspect(e.target.value)}
                 style={{
                   background: '#10141c',
-                  color: '#fff',
+                  color: '#fff', // Always white
                   border: 'none',
                   borderRadius: '12px',
                   padding: '8px 18px',
@@ -272,16 +277,17 @@ const BottomInputBar = ({
                 onMouseOver={e => e.currentTarget.style.background = '#232b39'}
                 onMouseOut={e => e.currentTarget.style.background = '#10141c'}
               >
-                <option value="16:9">🖥️ 16:9</option>
-                <option value="9:16">📱 9:16</option>
-                <option value="1:1">🔲 1:1</option>
+                <option value="" disabled hidden style={{color:'#fff'}}>Select aspect ratio</option>
+                <option value="16:9"> 16:9</option>
+                <option value="9:16"> 9:16</option>
+                <option value="1:1">1:1</option>
               </select>
               <select
                 value={selectedDuration}
                 onChange={e => setSelectedDuration(e.target.value)}
                 style={{
                   background: '#10141c',
-                  color: '#fff',
+                  color: '#fff', // Always white
                   border: 'none',
                   borderRadius: '12px',
                   padding: '8px 18px',
@@ -296,15 +302,16 @@ const BottomInputBar = ({
                 onMouseOver={e => e.currentTarget.style.background = '#232b39'}
                 onMouseOut={e => e.currentTarget.style.background = '#10141c'}
               >
-                <option value="5s">⏱️ 5s</option>
-                <option value="10s">⏱️ 10s</option>
+                <option value="" disabled hidden style={{color:'#fff'}}>Select duration</option>
+                <option value="5s"> 5s</option>
+                <option value="10s"> 10s</option>
               </select>
               <select
                 value={selectedResolution}
                 onChange={e => setSelectedResolution(e.target.value)}
                 style={{
                   background: '#10141c',
-                  color: '#fff',
+                  color: '#fff', // Always white
                   border: 'none',
                   borderRadius: '12px',
                   padding: '8px 18px',
@@ -320,6 +327,7 @@ const BottomInputBar = ({
                 onMouseOver={e => e.currentTarget.style.background = '#232b39'}
                 onMouseOut={e => e.currentTarget.style.background = '#10141c'}
               >
+                <option value="" disabled hidden style={{color:'#fff'}}>Select size</option>
                 <option value="480p">480p</option>
                 <option value="720p">720p</option>
               </select>
@@ -328,7 +336,7 @@ const BottomInputBar = ({
                 onChange={e => setSelectedQuality(e.target.value)}
                 style={{
                   background: '#10141c',
-                  color: '#fff',
+                  color: '#fff', // Always white
                   border: 'none',
                   borderRadius: '12px',
                   padding: '8px 18px',
@@ -344,6 +352,7 @@ const BottomInputBar = ({
                 onMouseOver={e => e.currentTarget.style.background = '#232b39'}
                 onMouseOut={e => e.currentTarget.style.background = '#10141c'}
               >
+                <option value="" disabled hidden style={{color:'#fff'}}>Select quality</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
               </select>
@@ -400,7 +409,7 @@ const BottomInputBar = ({
               </div>
             )}
             {/* Preview uploaded file or image URL */}
-            {((uploadedFile && previewUrl) || (inputText && (inputText.startsWith('http://') || inputText.startsWith('https://')))) && (
+            {imageUrl && (
               <div style={{
                 marginTop: '12px',
                 textAlign: 'left',
@@ -413,11 +422,7 @@ const BottomInputBar = ({
               }}>
                 {/* Clear/Cross button */}
                 <button
-                  onClick={() => {
-                    setUploadedFile && setUploadedFile(null);
-                    setPreviewUrl && setPreviewUrl('');
-                    setInputText && setInputText('');
-                  }}
+                  onClick={() => setImageUrl("")}
                   style={{
                     position: 'absolute',
                     top: '-8px',
@@ -444,44 +449,18 @@ const BottomInputBar = ({
                 >
                   ×
                 </button>
-                {uploadedFile && previewUrl && uploadedFile.type.startsWith('image') ? (
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    style={{
-                      maxWidth: '160px',
-                      maxHeight: '90px',
-                      borderRadius: '8px',
-                      border: '1px solid #23232b',
-                      background: '#18181b'
-                    }}
-                  />
-                ) : uploadedFile && previewUrl && uploadedFile.type.startsWith('video') ? (
-                  <video
-                    src={previewUrl}
-                    controls
-                    style={{
-                      maxWidth: '160px',
-                      maxHeight: '90px',
-                      borderRadius: '8px',
-                      border: '1px solid #23232b',
-                      background: '#18181b'
-                    }}
-                  />
-                ) : ((inputText && (inputText.startsWith('http://') || inputText.startsWith('https://'))) ? (
-                  <img
-                    src={inputText}
-                    alt="Image URL Preview"
-                    style={{
-                      maxWidth: '160px',
-                      maxHeight: '90px',
-                      borderRadius: '8px',
-                      border: '1px solid #23232b',
-                      background: '#18181b'
-                    }}
-                    onError={e => { e.target.onerror = null; e.target.src = ''; e.target.alt = 'Invalid image URL'; }}
-                  />
-                ) : null)}
+                <img
+                  src={imageUrl}
+                  alt="Image URL Preview"
+                  style={{
+                    maxWidth: '160px',
+                    maxHeight: '90px',
+                    borderRadius: '8px',
+                    border: '1px solid #23232b',
+                    background: '#18181b'
+                  }}
+                  onError={e => { e.target.onerror = null; e.target.src = ''; e.target.alt = 'Invalid image URL'; }}
+                />
               </div>
             )}
           </div>
@@ -556,6 +535,138 @@ const BottomInputBar = ({
           </div>
         </div>
       )}
+      {/* Image URL Modal */}
+      {showImageUrlModal && (
+        <div style={{
+          position: 'fixed', left: 0, top: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.45)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{ background: '#232b39', padding: 32, borderRadius: 16, minWidth: 320, boxShadow: '0 4px 32px 0 #0008', color: '#fff', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Enter Image URL</div>
+            <input
+              type="text"
+              value={imageUrlInput}
+              onChange={e => setImageUrlInput(e.target.value)}
+              placeholder="https://example.com/image.jpg"
+              style={{ padding: 10, borderRadius: 8, border: '1px solid #333', fontSize: 16, background: '#18181b', color: '#fff' }}
+              autoFocus
+              disabled={false}
+            />
+            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+              <button
+                onClick={() => {
+                  setShowImageUrlModal(false);
+                  setImageUrlInput("");
+                }}
+                style={{ padding: '8px 18px', borderRadius: 8, background: '#232b39', color: '#fff', border: '1px solid #444', fontWeight: 500, fontSize: 15, cursor: 'pointer' }}
+              >Cancel</button>
+              <button
+                onClick={() => {
+                  if (/^https?:\/\//.test(imageUrlInput)) {
+                    setImageUrl(imageUrlInput);
+                    setShowImageUrlModal(false);
+                  } else {
+                    alert('Please enter a valid image URL (http/https)');
+                  }
+                }}
+                style={{ padding: '8px 18px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 600, fontSize: 15, cursor: imageUrlInput.trim() ? 'pointer' : 'not-allowed', opacity: imageUrlInput.trim() ? 1 : 0.6 }}
+                disabled={!imageUrlInput.trim()}
+              >Continue</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Video Popup (minimizable) */}
+      {showVideoPopup && !minimizedVideoPopup && videoUrl && (
+        <div style={{
+          position: 'fixed',
+          bottom: '150px',
+          right: '40px',
+          zIndex: 40,
+          background: '#18181b',
+          borderRadius: '18px',
+          boxShadow: '0 4px 32px 0 #0008',
+          padding: 0,
+          minWidth: 320,
+          minHeight: 180,
+          maxWidth: '90vw',
+          maxHeight: '60vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+        }}>
+          <button
+            onClick={() => setMinimizedVideoPopup(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#fff',
+              fontSize: 20,
+              cursor: 'pointer',
+              margin: 8,
+              borderRadius: '50%',
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.2s',
+            }}
+            title="Minimize video"
+            aria-label="Minimize video"
+            onMouseOver={e => e.currentTarget.style.background = '#232b39'}
+            onMouseOut={e => e.currentTarget.style.background = 'none'}
+          >
+            &#8211;
+          </button>
+          <video
+            src={videoUrl}
+            controls
+            autoPlay
+            style={{
+              width: '100%',
+              height: 'auto',
+              borderRadius: '0 0 18px 18px',
+              background: '#000',
+              maxHeight: '50vh',
+            }}
+          />
+        </div>
+      )}
+      {/* Minimized Video Bubble */}
+      {showVideoPopup && minimizedVideoPopup && videoUrl && (
+        <button
+          onClick={() => setMinimizedVideoPopup(false)}
+          style={{
+            position: 'fixed',
+            bottom: '140px',
+            right: '54px',
+            zIndex: 41,
+            background: '#232b39',
+            border: '2px solid #3b82f6',
+            borderRadius: '50%',
+            width: 54,
+            height: 54,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 24px 0 rgba(59,130,246,0.25)',
+            cursor: 'pointer',
+            transition: 'background 0.2s',
+          }}
+          title="Show video"
+          aria-label="Show video"
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <rect x="4" y="6" width="16" height="12" rx="3" stroke="#fff" strokeWidth="2" />
+            <polygon points="15,12 11,14 11,10" fill="#3b82f6" />
+          </svg>
+        </button>
+      )}
+      {/* Example: Show video popup when previewUrl changes (customize as needed) */}
+      {/* useEffect(() => {
+        if (videoUrl) setShowVideoPopup(true);
+      }, [videoUrl]); */}
     </>
   );
 };

@@ -26,8 +26,8 @@ const HomePage = () => {
   const [showInputBar, setShowInputBar] = useState(true);
   const [showChatButton, setShowChatButton] = useState(false);
   const [selectedEffect, setSelectedEffect] = useState(null);
-  const [selectedResolution, setSelectedResolution] = useState('720p');
-  const [selectedQuality, setSelectedQuality] = useState('high');
+  const [selectedResolution, setSelectedResolution] = useState("");
+  const [selectedQuality, setSelectedQuality] = useState("");
 
   const navItems = [
     { icon: Home, label: 'Home', active: true },
@@ -54,10 +54,11 @@ const HomePage = () => {
 
   const [uploadedFile, setUploadedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [imageUrl, setImageUrl] = useState(""); // <-- NEW: for image URL input
   const [dragActive, setDragActive] = useState(false);
   const [inputText, setInputText] = useState("");
-  const [selectedAspect, setSelectedAspect] = useState("16:9");
-  const [selectedDuration, setSelectedDuration] = useState("5s");
+  const [selectedAspect, setSelectedAspect] = useState("");
+  const [selectedDuration, setSelectedDuration] = useState("");
   const fileInputRef = useRef(null);
 
   // Add refs for each section
@@ -334,7 +335,7 @@ const HomePage = () => {
   const pollTimeoutRef = useRef(null);
   const API_URL = '/api/proxy-muapi'; // Use local proxy endpoint
   const RESULT_URL = 'https://api.muapi.ai/api/v1/predictions';
-  const MAX_POLL_ATTEMPTS = 60;
+  const MAX_POLL_ATTEMPTS = 180; // Increased from 60 to 180 (3 minutes)
 
   const addLog = useCallback((message) => {
     if (isMountedRef.current) {
@@ -446,23 +447,9 @@ const HomePage = () => {
       quality: selectedQuality, // user-selected quality only
       duration: parseInt(selectedDuration), // user-selected duration only
     };
-    // Determine image_url from previewUrl or inputText if it's a valid public URL
-    let imageUrl = null;
-    function isHttpUrl(url) {
-      return typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'));
-    }
-    if (isHttpUrl(previewUrl)) {
-      imageUrl = previewUrl;
-    } else if (typeof inputText === 'string' && isHttpUrl(inputText)) {
-      imageUrl = inputText;
-    }
-    // If uploadedFile exists but previewUrl is not public, show error
-    if (uploadedFile && !isHttpUrl(previewUrl)) {
-      setError('Please upload a valid image URL (http/https) or use a direct image link.');
-      return;
-    }
-    if (!imageUrl) {
-      setError('Please upload an image or enter a valid image URL before generating.');
+    // Use imageUrl for image input
+    if (!imageUrl || !/^https?:\/\//.test(imageUrl)) {
+      setError('Please provide a valid image URL (http/https) using the image button.');
       return;
     }
     videoPayload.image_url = imageUrl;
@@ -509,7 +496,10 @@ const HomePage = () => {
       addLog(`Error: ${err.message}`);
       if (err.stack) addLog('Stack trace: ' + err.stack);
     }
-  }, [addLog, inputText, selectedEffect, selectedAspect, selectedResolution, selectedQuality, selectedDuration, previewUrl, pollForResult]);
+  }, [addLog, inputText, selectedEffect, selectedAspect, selectedResolution, selectedQuality, selectedDuration, imageUrl, pollForResult]);
+
+  // --- Video Generation Modal Popup State ---
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   React.useEffect(() => {
     return () => {
@@ -519,6 +509,17 @@ const HomePage = () => {
       }
     };
   }, []);
+
+  // Show modal when generation starts
+  useEffect(() => {
+    if ((status === 'submitting' || status === 'polling') && !showVideoModal) {
+      setShowVideoModal(true);
+    }
+    // Hide modal if user resets
+    if (status === 'idle' && showVideoModal) {
+      setShowVideoModal(false);
+    }
+  }, [status]);
 
   return (
     <div
@@ -535,6 +536,86 @@ const HomePage = () => {
         overflow: 'hidden'
       }}
     >
+      {/* Video Generation Modal Popup */}
+      {showVideoModal && (
+        <div style={{
+          position: 'fixed', left: 0, top: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.55)', zIndex: 2000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{ background: '#232b39', padding: 32, borderRadius: 16, minWidth: 340, minHeight: 220, boxShadow: '0 4px 32px 0 #0008', color: '#fff', display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'center', position: 'relative' }}>
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowVideoModal(false);
+                setStatus('idle');
+                setError('');
+                setLog([]);
+                setVideoUrl('');
+                setRequestId(null);
+                setInputText('');
+                setImageUrl('');
+                setUploadedFile(null);
+                setPreviewUrl(null);
+                setSelectedEffect(null);
+              }}
+              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+              title="Close"
+              aria-label="Close"
+              onMouseOver={e => e.currentTarget.style.background = '#2d2d2d'}
+              onMouseOut={e => e.currentTarget.style.background = 'none'}
+            >×</button>
+            {/* Loading or Video */}
+            {(status === 'submitting' || status === 'polling') && (
+              <>
+                <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8, textAlign: 'center' }}>
+                  <span role="img" aria-label="hourglass">⏳</span> Generating your video...
+                </div>
+                <div style={{ width: 320, maxWidth: '90vw', height: 8, background: '#18181b', borderRadius: 8, margin: '0 auto', overflow: 'hidden' }}>
+                  <div className="loading-bar" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg,#60a5fa 0%,#3b82f6 100%)', animation: 'loadingBarAnim 1.2s linear infinite' }} />
+                </div>
+                <style>{`
+                  @keyframes loadingBarAnim {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                  }
+                `}</style>
+              </>
+            )}
+            {status === 'completed' && videoUrl && (
+              <>
+                <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8, textAlign: 'center' }}>
+                  🎉 Your video is ready!
+                </div>
+                <video src={videoUrl} controls style={{ maxWidth: 400, maxHeight: 300, borderRadius: 10, marginBottom: 12, background: '#000' }} />
+                <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+                  <a href={videoUrl} download target="_blank" rel="noopener noreferrer" style={{ padding: '8px 18px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 600, fontSize: 15, textDecoration: 'none', cursor: 'pointer' }}>Download</a>
+                  <button
+                    onClick={() => {
+                      setShowVideoModal(false);
+                      setStatus('idle');
+                      setError('');
+                      setLog([]);
+                      setVideoUrl('');
+                      setRequestId(null);
+                      setInputText('');
+                      setImageUrl('');
+                      setUploadedFile(null);
+                      setPreviewUrl(null);
+                      setSelectedEffect(null);
+                    }}
+                    style={{ padding: '8px 18px', borderRadius: 8, background: '#232b39', color: '#fff', border: '1px solid #444', fontWeight: 500, fontSize: 15, cursor: 'pointer' }}
+                  >Close</button>
+                </div>
+              </>
+            )}
+            {status === 'error' && error && (
+              <div style={{ color: '#f87171', marginTop: 12, textAlign: 'center' }}>
+                <b>Error:</b> {error}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {/* Main Content */}
       <div style={{ width: '100%', maxWidth: '1200px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#111' }}>
         {/* Top Header */}
@@ -839,6 +920,8 @@ const HomePage = () => {
           setPreviewUrl={setPreviewUrl}
           inputText={inputText}
           setInputText={setInputText}
+          imageUrl={imageUrl}
+          setImageUrl={setImageUrl}
           selectedAspect={selectedAspect}
           setSelectedAspect={setSelectedAspect}
           selectedDuration={selectedDuration}
@@ -848,13 +931,44 @@ const HomePage = () => {
           handleDragOver={handleDragOver}
           handleDragLeave={handleDragLeave}
           handleDrop={handleDrop}
-          handleGenerate={startGenerationWithKey} // <-- Use MuApi workflow directly
+          handleGenerate={startGenerationWithKey}
           selectedEffect={selectedEffect}
           selectedResolution={selectedResolution}
           setSelectedResolution={setSelectedResolution}
           selectedQuality={selectedQuality}
           setSelectedQuality={setSelectedQuality}
         />
+        {/* Always show chat bubble button */}
+        <button
+          onClick={() => {
+            setShowInputBar(true);
+            setShowChatButton(false);
+          }}
+          style={{
+            position: 'fixed',
+            bottom: '80px',
+            right: '40px',
+            zIndex: 30,
+            background: 'linear-gradient(120deg, #232b39 0%, #3b82f6 100%)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '50%',
+            width: '54px',
+            height: '54px',
+            boxShadow: '0 4px 24px 0 rgba(59,130,246,0.25)',
+            display: showInputBar ? 'none' : 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'background 0.2s'
+          }}
+          title="Open Chat"
+          aria-label="Open Chat"
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
 
         {/* Video Generation Modal and Log */}
         {showApiKeyModal && (
@@ -904,8 +1018,29 @@ const HomePage = () => {
             <b>Result Video:</b><br />
             <a href={videoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa' }}>{videoUrl}</a><br />
             <video src={videoUrl} controls style={{ maxWidth: 400, marginTop: 10, borderRadius: 8 }} />
+            {/* Generate another one button */}
+            <div style={{ marginTop: 18 }}>
+              <button
+                onClick={() => {
+                  setStatus('idle');
+                  setError('');
+                  setLog([]);
+                  setVideoUrl('');
+                  setRequestId(null);
+                  setInputText('');
+                  setImageUrl('');
+                  setUploadedFile(null);
+                  setPreviewUrl(null);
+                  setSelectedEffect(null);
+                }}
+                style={{ padding: '10px 28px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', marginTop: 10 }}
+              >
+                Generate another one?
+              </button>
+            </div>
           </div>
         )}
+        
         {error && (
           <div style={{ color: '#f87171', margin: '10px 0' }}>
             <b>Error:</b> {error}
