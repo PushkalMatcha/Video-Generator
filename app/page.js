@@ -332,7 +332,7 @@ const HomePage = () => {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const isMountedRef = useRef(true);
   const pollTimeoutRef = useRef(null);
-  const API_URL = 'https://api.muapi.ai/api/v1/generate_wan_ai_effects';
+  const API_URL = '/api/proxy-muapi'; // Use local proxy endpoint
   const RESULT_URL = 'https://api.muapi.ai/api/v1/predictions';
   const MAX_POLL_ATTEMPTS = 60;
 
