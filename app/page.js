@@ -613,6 +613,28 @@ const HomePage = () => {
                 <b>Error:</b> {error}
               </div>
             )}
+            {status === 'failed' && error && error.includes('retry') && (
+              <div style={{ margin: '16px 0' }}>
+                <button
+                  onClick={() => {
+                    setError('');
+                    setStatus('idle');
+                    setLog([]);
+                    setVideoUrl('');
+                    setRequestId(null);
+                    setShowApiKeyModal(true);
+                  }}
+                  style={{ padding: '10px 28px', borderRadius: 8, background: '#f87171', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
+                >
+                  Retry Generation
+                </button>
+              </div>
+            )}
+            {requestId && (
+              <div style={{ margin: '10px 0' }}>
+                <b>Request ID:</b> {requestId}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1008,86 +1030,6 @@ const HomePage = () => {
             </div>
           </div>
         )}
-        {requestId && (
-          <div style={{ margin: '10px 0' }}>
-            <b>Request ID:</b> {requestId}
-          </div>
-        )}
-        {videoUrl && (
-          <div style={{ margin: '18px 0' }}>
-            <b>Result Video:</b><br />
-            <a href={videoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa' }}>{videoUrl}</a><br />
-            <video src={videoUrl} controls style={{ maxWidth: 400, marginTop: 10, borderRadius: 8 }} />
-            {/* Generate another one button */}
-            <div style={{ marginTop: 18 }}>
-              <button
-                onClick={() => {
-                  setStatus('idle');
-                  setError('');
-                  setLog([]);
-                  setVideoUrl('');
-                  setRequestId(null);
-                  setInputText('');
-                  setImageUrl('');
-                  setUploadedFile(null);
-                  setPreviewUrl(null);
-                  setSelectedEffect(null);
-                }}
-                style={{ padding: '10px 28px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer', marginTop: 10 }}
-              >
-                Generate another one?
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {error && (
-          <div style={{ color: '#f87171', margin: '10px 0' }}>
-            <b>Error:</b> {error}
-          </div>
-        )}
-        {status === 'failed' && error && error.includes('retry') && (
-          <div style={{ margin: '16px 0' }}>
-            <button
-              onClick={() => {
-                setError('');
-                setStatus('idle');
-                setLog([]);
-                setVideoUrl('');
-                setRequestId(null);
-                setShowApiKeyModal(true);
-              }}
-              style={{ padding: '10px 28px', borderRadius: 8, background: '#f87171', color: '#fff', border: 'none', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
-            >
-              Retry Generation
-            </button>
-          </div>
-        )}
-        {status === 'submitting' || status === 'polling' ? (
-          <div id="video-generation-status" style={{ margin: '32px 0', textAlign: 'center' }}>
-            {/* Show loading bar and status while video is generating */}
-            <div style={{ marginBottom: 12, fontWeight: 500, color: '#60a5fa', fontSize: 18 }}>
-              <span role="img" aria-label="hourglass">⏳</span> Your video is generating...
-            </div>
-            <div style={{ width: 320, maxWidth: '90vw', height: 8, background: '#232b39', borderRadius: 8, margin: '0 auto', overflow: 'hidden' }}>
-              <div className="loading-bar" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg,#60a5fa 0%,#3b82f6 100%)', animation: 'loadingBarAnim 1.2s linear infinite' }} />
-            </div>
-            <style>{`
-              @keyframes loadingBarAnim {
-                0% { transform: translateX(-100%); }
-                100% { transform: translateX(100%); }
-              }
-            `}</style>
-          </div>
-        ) : null}
-        {/*
-        <div style={{ marginTop: 18, background: '#232b39', borderRadius: 8, padding: 12, fontSize: 14, minHeight: 80 }}>
-          <b>Log:</b>
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
-            {log.map((l, i) => <li key={i}>{l}</li>)}
-          </ul>
-        </div>
-        */}
       </div>
     </div>
   );
