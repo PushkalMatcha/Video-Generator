@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Image } from 'lucide-react';
+import CustomDropdown from './CustomDropdown';
 
 const BottomInputBar = ({
   showInputBar,
@@ -257,105 +258,47 @@ const BottomInputBar = ({
               marginBottom: 0,
               width: '100%'
             }}>
-              <select
+              <CustomDropdown
                 value={selectedAspect}
                 onChange={e => setSelectedAspect(e.target.value)}
-                style={{
-                  background: '#10141c',
-                  color: '#fff', // Always white
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '8px 18px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
-                  outline: 'none',
-                  appearance: 'none',
-                  minWidth: '80px',
-                  transition: 'background 0.2s'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = '#232b39'}
-                onMouseOut={e => e.currentTarget.style.background = '#10141c'}
-              >
-                <option value="" disabled hidden style={{color:'#fff'}}>Select aspect ratio</option>
-                <option value="16:9"> 16:9</option>
-                <option value="9:16"> 9:16</option>
-                <option value="1:1">1:1</option>
-              </select>
-              <select
+                placeholder="Select aspect ratio"
+                options={[
+                  
+                  { value: '16:9', label: '16:9' },
+                  { value: '9:16', label: '9:16' },
+                  { value: '1:1', label: '1:1' },
+                ]}
+              />
+              <CustomDropdown
                 value={selectedDuration}
                 onChange={e => setSelectedDuration(e.target.value)}
-                style={{
-                  background: '#10141c',
-                  color: '#fff', // Always white
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '8px 18px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
-                  outline: 'none',
-                  appearance: 'none',
-                  minWidth: '70px',
-                  transition: 'background 0.2s'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = '#232b39'}
-                onMouseOut={e => e.currentTarget.style.background = '#10141c'}
-              >
-                <option value="" disabled hidden style={{color:'#fff'}}>Select duration</option>
-                <option value="5s"> 5s</option>
-                <option value="10s"> 10s</option>
-              </select>
-              <select
+                placeholder="Select duration"
+                options={[
+                  
+                  { value: '5s', label: '5s' },
+                  { value: '10s', label: '10s' },
+                ]}
+              />
+              <CustomDropdown
                 value={selectedResolution}
                 onChange={e => setSelectedResolution(e.target.value)}
-                style={{
-                  background: '#10141c',
-                  color: '#fff', // Always white
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '8px 18px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
-                  outline: 'none',
-                  appearance: 'none',
-                  minWidth: '70px',
-                  transition: 'background 0.2s',
-                  marginLeft: '0'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = '#232b39'}
-                onMouseOut={e => e.currentTarget.style.background = '#10141c'}
-              >
-                <option value="" disabled hidden style={{color:'#fff'}}>Select size</option>
-                <option value="480p">480p</option>
-                <option value="720p">720p</option>
-              </select>
-              <select
+                placeholder="Select size"
+                options={[
+                  
+                  { value: '480p', label: '480p' },
+                  { value: '720p', label: '720p' },
+                ]}
+              />
+              <CustomDropdown
                 value={selectedQuality}
                 onChange={e => setSelectedQuality(e.target.value)}
-                style={{
-                  background: '#10141c',
-                  color: '#fff', // Always white
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '8px 18px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)',
-                  outline: 'none',
-                  appearance: 'none',
-                  minWidth: '90px',
-                  transition: 'background 0.2s',
-                  marginLeft: '0'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = '#232b39'}
-                onMouseOut={e => e.currentTarget.style.background = '#10141c'}
-              >
-                <option value="" disabled hidden style={{color:'#fff'}}>Select quality</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
+                placeholder="Select quality"
+                options={[
+                  
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                ]}
+              />
               <div style={{ flex: 1 }} />
             </div>
             {/* Show selected effect if any */}
