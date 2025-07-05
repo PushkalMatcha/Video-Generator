@@ -51,6 +51,11 @@ const BottomInputBar = ({
     // Validation: require effect selection AND (image or text)
     const hasImage = (uploadedFile && previewUrl) || (inputText && (inputText.startsWith('http://') || inputText.startsWith('https://')));
     const hasText = inputText && inputText.trim().length > 0;
+    // Dropdown validation
+    if (!selectedAspect || !selectedDuration || !selectedResolution || !selectedQuality) {
+      alert('Please select all dropdown options (aspect ratio, duration, size, and quality) before generating.');
+      return;
+    }
     if (!selectedEffect) {
       alert('Please select an effect before generating.');
       return;
